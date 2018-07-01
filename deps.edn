@@ -1,0 +1,4 @@
+{:paths ["src"]
+ :deps {org.clojure/clojure {:mvn/version "1.9.0"}
+        clojure2d {:mvn/version "1.0.0-RC2"}
+        generateme/fastmath {:mvn/version "1.0.1"}}}
