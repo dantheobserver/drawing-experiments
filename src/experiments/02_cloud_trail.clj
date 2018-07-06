@@ -8,36 +8,48 @@
 (set! *unchecked-math* :warn-on-boxed)
 
 (def canvas-size [500 500])
+(def x-range 50)
+(def y-range 100)
+(def spawn-pos (atom [250 250])) ;; TODO: Update from mouse cursor
 
+;;; Cloud trail functions
 (defn- trail-visible? [{:keys [^long y ^long size]}]
-  (or (< 0.0 size)
-      (< ^long (canvas-size 1) y)))
+  (or (< 0.0 size) (< y ^long (canvas-size 1))))
+(defn- rand-x [^long x] (r/frand (- x ^long x-range) (+ x ^long x-range)))
+(defn- rand-y [^long y] (r/frand (- y ^long y-range) (+ y ^long y-range)))
+(defn- rand-size [] (r/frand 60 100))
+(defn- rand-rate [] (r/frand 1 10))
 
-(defn- next-piece [{:keys [x y size rate] :as piece}]
-  (-> piece
-      (update :size - (r/frand 1 4))
-      (update :y + (r/frand 1 6))
-      (update :x + (r/frand -6 6))))
-
-(defn cloud-trail
-  "A lazy collection that shrinks, jostles and disappears."
-  [x y size rate]
-  (let [initial {:x x, :y y, :size size, :rate rate}]
-    (take-while trail-visible?
-                (iterate next-piece initial))))
+(defn- next-part [{:keys [^long x ^long y ^long size ^long rate] :as part}]
+  (if (trail-visible? part)
+    ;; Shrink and jostle trail
+    (-> part
+        (update :size - (r/frand 1 10))
+        (update :y + (r/frand 1 10))
+        (update :x + (r/frand -6 6)))
+    ;; Respawn wherever the spawn pos is
+    (let [[^long x ^long y] @spawn-pos]
+      (-> part
+          (assoc :x (rand-x x)) ; x pos
+          (assoc :y (rand-y y)) ; y pos
+          (assoc :size (rand-size)) ; size
+          (assoc :rate (rand-rate)))))) ; rate
 
 (defn setup [canvas window]
-  (cloud-trail 250 30 100 1))
+  (let [[^long x ^long y] @spawn-pos]
+    (repeatedly 100 #(hash-map
+                      :x (rand-x x)
+                      :y (rand-y y)
+                      :size (rand-size)
+                      :rate (rand-rate)))))
 
-(defn draw [canvas window frame [cur-trail & rem-trail]]
-  (if-let [{:keys [x y size]} cur-trail]
-    (do
-      (c/set-background canvas :black)
-      (-> canvas
-          (c/set-color :white)
-          (c/ellipse x y size size)))
-    (c/set-background canvas :black))
-  rem-trail)
+(defn draw [canvas window frame trail-parts]
+  (c/set-background canvas :black)
+  (doseq [{:keys [x y size] :as cur-part} trail-parts]
+    (-> canvas
+        (c/ellipse x y size size)
+        (c/set-color [255 255 255 (r/irand 100 255)])))
+  (map next-part trail-parts))
 
 (defn run []
   (let [[w h] canvas-size]
@@ -47,3 +59,5 @@
         :fps 30
         :draw-fn draw
         :setup setup}))))
+
+(run)
