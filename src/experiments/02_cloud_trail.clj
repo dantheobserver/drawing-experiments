@@ -8,13 +8,13 @@
 (set! *unchecked-math* :warn-on-boxed)
 
 (def canvas-size [500 500])
-(def x-range 100)
-(def y-range 90)
+(def x-range 60)
+(def y-range 60)
 
 ;;; Cloud trail functions
 (defn- trail-visible? [{:keys [^long size]}]
   (< 0.0 size))
-
+(defn- rand-transp [] [255 255 255 (r/irand 100 200)])
 (defn- rand-x [^long x] (r/frand (- x ^long x-range) (+ x ^long x-range)))
 (defn- rand-y [^long y] (r/frand (- y ^long y-range) (+ y ^long y-range)))
 (defn- rand-size [] (r/frand 60 100))
@@ -26,15 +26,16 @@
     (let [x-rng (/ size 6)]
       (-> part
           (update :size - 2)
-          (update :y + 10)
-          #_(update :x + (r/frand (- ^long x-rng) x-rng))))
+          (update :y + 10)))
+          
     ;; Respawn wherever the spawn pos is
     (let [[^long x ^long y] spawn-pos]
-      (-> part
-          (assoc :x (rand-x x)) ; x pos
-          (assoc :y (rand-y y)) ; y pos
-          (assoc :size (rand-size)) ; size
-          (assoc :rate (rand-rate)))))) ; rate
+      {
+       :x (rand-x x) ; x pos
+       :y (rand-y y) ; y pos
+       :size (rand-size) ; size
+       :rate (rand-rate)
+       :color (rand-transp)}))) ; rate
 
 (defn draw-state [spawn-pos]
   (let [[^long x ^long y] spawn-pos]
@@ -42,14 +43,16 @@
                       :x (rand-x x)
                       :y (rand-y y)
                       :size (r/frand 10 100)
-                      :rate (rand-rate)))))
+                      :rate (rand-rate)
+                      :color (rand-transp)))))
 
 (defn draw [canvas window frame_ trails]
-  (c/set-background canvas :black)
-  (doseq [{:keys [x y size] :as cur-part} trails]
+  (c/set-background canvas "#5474d3")
+  (doseq [{:keys [x y size color] :as cur-part} trails]
     (-> canvas
-        (c/ellipse x y size size)
-        (c/set-color [255 255 255 (r/irand 100 255)])))
+        (c/set-color color)
+        (c/ellipse x y size size)))
+        
   (let [spawn-pos (-> window c/get-state :spawn-pos)]
     (map #(next-part % spawn-pos) trails)))
 
