@@ -41,7 +41,7 @@
     (repeatedly 100 #(hash-map
                       :x (rand-x x)
                       :y (rand-y y)
-                      :size (rand-size)
+                      :size (r/frand 10 100)
                       :rate (rand-rate)))))
 
 (defn draw [canvas window frame_ trails]
