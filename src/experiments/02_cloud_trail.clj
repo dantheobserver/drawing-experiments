@@ -27,11 +27,9 @@
       (-> part
           (update :size - 2)
           (update :y + 10)))
-          
     ;; Respawn wherever the spawn pos is
     (let [[^long x ^long y] spawn-pos]
-      {
-       :x (rand-x x) ; x pos
+      {:x (rand-x x) ; x pos
        :y (rand-y y) ; y pos
        :size (rand-size) ; size
        :rate (rand-rate)
@@ -52,7 +50,6 @@
     (-> canvas
         (c/set-color color)
         (c/ellipse x y size size)))
-        
   (let [spawn-pos (-> window c/get-state :spawn-pos)]
     (map #(next-part % spawn-pos) trails)))
 
