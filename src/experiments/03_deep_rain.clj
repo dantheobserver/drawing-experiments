@@ -9,8 +9,8 @@
 
 ;; TODO: Ideas
 ;; Drops
-;; * Rain will have a z coord which control its depth
-;; * Transparency and size x/(abs z),
+;; * DONE: Rain will have a z coord which control its depth
+;; * DONE: Transparency and size x/(abs z),
 ;; * Will accellerate consistently, but have different `weight`
 ;; * Intensity ebbs and flows
 ;; * Create concentrations at random points.
@@ -63,20 +63,22 @@
 
 (defn- initial-state [bg-color {:keys [window-size max-depth]}]
   {:bg-color bg-color
-   :drops (repeatedly 1000 #(new-droplet (window-size 0) -200 max-depth))})
+   :drops (repeatedly 300 #(new-droplet (window-size 0) -200 max-depth))})
 
-(let [window-name "rain-scene"
-      window-size [800 600]
-      fps 30
-      bg-color "#08061c"
-      canvas (apply c/canvas window-size)
-      global-state {:wind 0
-                    :window-size window-size
-                    :max-drops 100
-                    :max-depth 30}]
-  (c/show-window {:canvas canvas
-                  :window-name window-name
-                  :draw-fn draw-fn
-                  :draw-state (initial-state bg-color global-state)
-                  :state global-state
-                  :fps fps}))
+(defn run []
+  (let [window-name "rain-scene"
+        window-size [800 600]
+        fps 30
+        bg-color "#08061c"
+        canvas (apply c/canvas window-size)
+        global-state {:wind 0
+                      :window-size window-size
+                      :max-drops 100
+                      :max-depth 30}]
+    (c/show-window {:canvas canvas
+                    :window-name window-name
+                    :draw-fn draw-fn
+                    :draw-state (initial-state bg-color global-state)
+                    :state global-state
+                    :fps fps})))
+#_(run)
