@@ -7,7 +7,7 @@
   {:window-size window-size
    :vanishing-point 100})
 
-(defn object-field [rows cols {:keys [window-size vanishing-point] :as gstate}]
+(defn object-field [rows cols z {:keys [window-size vanishing-point] :as gstate}]
   (let [[w h] window-size
         obj-pct 0.75                 ;; percentage of empty space surrouding object
         row-height (/ h rows)
@@ -19,17 +19,25 @@
                   c (range cols)
                   :let [x (-> c (* col-width) (+ width-offset))
                         y (-> r (* row-height) (+ height-offset))]]
-              {:x x :y y})}))
+              {:x x :y y :z z})}))
 
-(defn draw [canvas window frame _]
+(defn project-obj
+  "Project object with offset size and position based
+  on z-index"
+  [canvas {:keys [x y z]} [w h] max-z]
+  (let [z-pct (- 1 (/ z max-z))]
+    (c/ellipse canvas x y (* w z-pct) (* h z-pct))))
+
+(defn draw [canvas window frame {:keys [obj-size objects] :as state}]
   (c/set-background canvas :white)
-  (let [{:keys [obj-size objects]} (object-field 4 4 (c/get-state window))
-        [w h] obj-size]
-    (doseq [{:keys [x y]} objects]
+  (let [[w h] obj-size
+        t (/ frame (:fps window))
+        {:keys [vanishing-point]} (c/get-state window)]
+    (doseq [obj objects]
       (-> canvas
           (c/set-color :black)
-          (c/ellipse x y w h))))
-  nil)
+          (project-obj obj obj-size vanishing-point))))
+  state)
 
 (defn run []
   (let [state (global-state [500 500])
@@ -39,6 +47,7 @@
                     :window-name window-name
                     :draw-fn draw
                     :state state
+                    :draw-state (object-field 4 4 0 state)
                     :fps fps})))
 
 (run)
