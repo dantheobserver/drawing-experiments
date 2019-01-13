@@ -67,5 +67,6 @@
         :draw-state (draw-state spawn-pos)}))))
 
 (defmethod c/mouse-event [window-name :mouse-moved] [e state]
-  (let [new-pos ((juxt c/mouse-x c/mouse-y) e)]
-    (assoc state :spawn-pos new-pos)))
+  (let [mouse-pos ((juxt c/mouse-x c/mouse-y) e)]
+    (println e)
+    (println mouse-pos)))

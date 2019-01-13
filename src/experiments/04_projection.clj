@@ -1,53 +1,65 @@
 (ns experiments.04-projection
   (:require [clojure2d.core :as c]
             [fastmath.core :as m]
-            [fastmath.random :as r]))
+            [fastmath.random :as r]
+            [common.utils :as utils :use [pi-memoized :as pi]]
+            [fastmath.core :as math]))
 
-(defn global-state [window-size]
-  {:window-size window-size
-   :vanishing-point 100})
+(def w 500)
+(def h 500)
 
-(defn object-field [rows cols z {:keys [window-size vanishing-point] :as gstate}]
-  (let [[w h] window-size
-        obj-pct 0.75                 ;; percentage of empty space surrouding object
-        row-height (/ h rows)
-        col-width (/ w cols)
-        height-offset (/ row-height 2)     ;;coord-placement
-        width-offset (/ col-width 2)]
-    {:obj-size [(* col-width obj-pct) (* row-height obj-pct)]
-     :objects (for [r (range rows)
-                  c (range cols)
-                  :let [x (-> c (* col-width) (+ width-offset))
-                        y (-> r (* row-height) (+ height-offset))]]
-              {:x x :y y :z z})}))
+(defn draw-vanishing-point [canvas [xv yv]]
+  (-> canvas
+      (c/set-color [255 0 0])
+      (c/ellipse xv yv 5 5)))
 
-(defn project-obj
-  "Project object with offset size and position based
-  on z-index"
-  [canvas {:keys [x y z]} [w h] max-z]
-  (let [z-pct (- 1 (/ z max-z))]
-    (c/ellipse canvas x y (* w z-pct) (* h z-pct))))
+(defn- projected-point
+  [[x y z :as point]
+   [xv yv zv :as vanishing-point]]
+  (let [dist (m/dist x y xv yv)
+        dx (- xv x)
+        dy (- yv y)
+        pt-dist (* z (/ dist zv))
+        ratio (/ pt-dist dist)
+        offsets (mapv (partial * ratio) [dx dy])]
+    (mapv + [x y] offsets)))
 
-(defn draw [canvas window frame {:keys [obj-size objects] :as state}]
-  (c/set-background canvas :white)
-  (let [[w h] obj-size
-        t (/ frame (:fps window))
-        {:keys [vanishing-point]} (c/get-state window)]
-    (doseq [obj objects]
+(defn draw-points
+  [canvas z-points [x y] vp]
+  (doseq [z z-points]
+    (let [ [x' y'] (projected-point [x y z] vp)]
       (-> canvas
-          (c/set-color :black)
-          (project-obj obj obj-size vanishing-point))))
+          (c/set-color [0 0 255])
+          (c/ellipse x' y' 4 4)))))
+
+(defn draw [canvas window frame {:keys [vp points] :as state}]
+  (-> canvas
+      (c/set-background [255 255 255])
+      (draw-vanishing-point vp)
+      (draw-points points (:point (c/get-state window)) vp))
   state)
 
 (defn run []
-  (let [state (global-state [500 500])
-        fps 30
-        window-name "perspective"]
-    (c/show-window {:canvas (apply c/canvas (:window-size state))
-                    :window-name window-name
-                    :draw-fn draw
-                    :state state
-                    :draw-state (object-field 4 4 0 state)
-                    :fps fps})))
+  (let [vp [(/ w 2) (/ h 2) 100]
+        sections 30
+        z-inc (/ 100 sections)
+        points (->> (take sections (iterate #(+ z-inc %) 0))
+                    (map m/round))
+        window-name "point projection"
+        window (c/show-window {:canvas (c/canvas w h)
+                               :window-name window-name
+                               :draw-fn (utils/proxy-fn draw)
+                               :draw-state (utils/map-keyed vp points)
+                               :state {:point [0 0]}
+                               :fps 30})]
+
+    (.setAlwaysOnTop (:frame window) true)
+
+    (defmethod c/mouse-event [window-name :mouse-moved] [e state]
+      (let [mouse-pos ((juxt c/mouse-x c/mouse-y) e)]
+        (c/set-state! window (assoc state :point mouse-pos))
+        )))
+  )
+
 
 (run)

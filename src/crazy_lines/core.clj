@@ -32,11 +32,11 @@
       (+ rotation-rate)
       (assoc gear :line-angle)))
 
-;; (comment
-;;   (do
-;;     (let [test-gear (->Gear 30.0 [0 0] 0 (pi 2))]
-;;       (->> test-gear
-;;            rotate
-;;            line-edge-coord
-;;            (map math/round))))
-;;   )
+(comment
+  (do
+    (let [test-gear (->Gear 30.0 [0 0] 0 (pi 2))]
+      (->> test-gear
+           rotate
+           line-edge-coord
+           (map math/round))))
+  )

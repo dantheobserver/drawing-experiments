@@ -2,7 +2,8 @@
   (:require [fastmath.core :as math]
             [clojure2d.core :as c]
             [clojure2d.color :as color]
-            [clojure2d.pixels :as p]))
+            [clojure2d.pixels :as p]
+            [clojure.core.reducers :as r]))
 
 (def pi 3.14159265)
 

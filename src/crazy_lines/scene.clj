@@ -21,14 +21,14 @@
    (core/make-gear (size-fn)
                    pos
                    (r/drand (core/pi 2))
-                   (r/drand (- ^double (:speed-limit options)) (:speed-limit options)))))
+                   (r/drand (:speed-limit options)))))
 
 (defn attached-gear
   "Generates a new gear attached to the end of the line of the previous gear"
   [gear]
   (let [next-position (core/line-edge-coord gear)
         {:keys [^double radius]} gear]
-    (random-gear next-position)))
+    (random-gear next-position #(r/drand (/ radius 2) radius))))
 
 (defn gen-gears
   "Generate a sequence of random gears starting
@@ -114,3 +114,5 @@
                             :draw-fn draw-proxy
                             :draw-state {:gears initial-state
                                          :marks []}}))
+
+(.setAlwaysOnTop ^javax.swing.JFrame (:frame window) true)
