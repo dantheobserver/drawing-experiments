@@ -33,7 +33,6 @@
         #_(c/path polygon true false))))
 
 (defn draw [canvas window frame {:keys [vp points] :as state}]
-
   (-> canvas
       (c/set-background [255 255 255])
       (draw-vanishing-point vp)

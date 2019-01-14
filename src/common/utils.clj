@@ -1,21 +1,28 @@
 (ns common.utils
-  (:require [fastmath.core :as m]))
+  (:require [fastmath.core :as m])
+  (clojure.core.ajkj))
 
 (defmacro anon-proxy
+  "Creates a function that proxies another fn.
+  Used when live coding with an api that keeps
+  a draw fn reference."
   [draw-fn]
   `(fn [& ~'args]
      (apply ~draw-fn ~'args)))
 
-(defn pi [factor] (* m/PI factor))
-
-(def pi-mem (memoize pi))
 
 (defmacro map-keyed
+  "given bound symbol names, will return a map
+  of keys with the symbol name and its value."
   {:style/indent :defn}
   [& args]
   `(->> (list ~@args)
         (interleave (map keyword '(~@args)))
         (apply hash-map)))
+
+(defn pi [factor] (* m/PI factor))
+
+(def pi-mem (memoize pi))
 
 (defn projected-point
   "Given a point with `x`,`y`,`z` and
@@ -35,8 +42,14 @@
 (comment
   (let [draw-fn (fn [] 1)
         aproxy (anon-proxy draw-fn)]
-    #_(macroexpand '(anon-proxy draw-fn))
     (aproxy))
+
   (let [test (fn [] (println "testing"))
         a-proxy (anon-proxy proxy-fn)]
-    (a-proxy)))
+    (a-proxy))
+
+  (let [some-promise (promise)]
+    (println "Calling thread to print promise")
+    (.start (Thread. (fn [] (println "unblocking thread" @some-promise))))
+    (deliver some-promise 12)
+    ))
