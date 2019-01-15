@@ -1,6 +1,5 @@
 (ns common.utils
-  (:require [fastmath.core :as m])
-  (clojure.core.ajkj))
+  (:require [fastmath.core :as m]))
 
 (defmacro anon-proxy
   "Creates a function that proxies another fn.
