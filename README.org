@@ -1,0 +1,19 @@
+* Minimum project
+#+BEGIN_SRC clojure
+(ns experiments.example
+  (:require [fastmath.core :as math]
+            [fastmath.random :as r]
+            [clojure2d.core :as c]
+            [clojure2d.color :as clr]
+            [fastmath.core :as m]))
+
+
+
+(defn draw
+  [canvas window frame loop-state]
+  )
+
+(c/with-canvas->
+  (c/canvas 300 300)
+  (c/show-window "first try" (draw-loop! 32 64 64 (cur-time))))
+#+END_SRC

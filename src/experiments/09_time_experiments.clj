@@ -44,7 +44,7 @@
    {:canvas (c/canvas w h)
     :fps 60
     :window-name window-name
-    :draw-fn (utils/proxy-fn draw)
+    :draw-fn (utils/anon-proxy draw)
     :draw-state {:pos (mapv #(/ ^long % 2) [w h])}}))
 
 (defmethod c/key-typed [window-name \q] [event state]
