@@ -25,7 +25,7 @@
 
 (defn run []
   (let [window-name "pixel manipulation"
-        filename "./resources/img-a.jpg"
+        filename "resources/img-a.jpg"
         pixels (p/load-pixels filename)
         window (c/show-window {:canvas (c/canvas (c/width pixels) (c/height pixels))
                                :window-name window-name
