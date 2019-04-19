@@ -13,13 +13,16 @@
 (def shape-filter
   (p/filter-channel-xy
    (fn [ch p x y]
-     (if (and (< 200 x 300)
-              (< 150 y 500))
-       (rem (+ 10.0 ^double ch) 256.0)
-       ch))))
+     (let [value (p/get-value p ch x y)]
+       (if (and (< 200 x 300)
+                (< 150 y 500))
+         (rem (+ 10.0 ^double value) 256.0)
+         value)))))
 
 (defn draw [canvas window frame {:keys [pixels] :as state}]
-  (let [filtered (p/filter-channels #_cycle-filter shape-filter pixels)]
+  (let [{:keys [filter-idx filters]} (c/get-state window)
+        active-filter (get filters filter-idx)
+        filtered (p/filter-channels active-filter pixels)]
     (p/set-canvas-pixels! canvas pixels)
     (assoc state :pixels filtered)))
 
@@ -27,21 +30,21 @@
   (let [window-name "pixel manipulation"
         filename "resources/img-a.jpg"
         pixels (p/load-pixels filename)
-        window (c/show-window {:canvas (c/canvas (c/width pixels) (c/height pixels))
+        window (c/show-window {:canvas (c/canvas (c/width pixels) (c/height pixels) :fast)
                                :window-name window-name
                                :draw-fn (utils/anon-proxy draw)
                                :always-on-top? true
-                               ;; :draw-fn draw
                                :draw-state {:pixels pixels}
+                               :state {:filter-idx 0
+                                       :filters [cycle-filter shape-filter]}
                                :fps 30})]
 
-
-    ;; Update state with mouse position.
-
-
-    #_(defmethod c/mouse-event [window-name :mouse-moved] [e state]
-        (let [mouse-pos ((juxt c/mouse-x c/mouse-y) e)]
-          (c/set-state! window (assoc state :point mouse-pos))))))
+    (defmethod c/key-event [window-name :key-pressed] [evt {:keys [filter-idx filters] :as state}]
+      (let [total (count filters) 
+            val (condp = (c/key-code evt)
+                  :up (rem (inc filter-idx) total)
+                  :down (mod (dec filter-idx) total))]
+        (c/set-state! window (assoc state :filter-idx val))))))
 (run)
 
 (comment
