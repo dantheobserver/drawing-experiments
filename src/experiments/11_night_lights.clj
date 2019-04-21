@@ -30,8 +30,7 @@
                           (+ x x-buffer)))
           next-y (move-down y (r/frand 2))] ;;magic random
       (->Glimmer 
-       beam-x
-       ;; return for bobble
+       beam-x ;; return for bobble
        #_(if (< (- x x-buffer) next-x (+ x x-buffer))
            next-x
            (- next-x))
