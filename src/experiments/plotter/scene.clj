@@ -1,11 +1,18 @@
 (ns experiments.plotter.scene
-  (:require [experiments.plotter.core :as core]
-            [fastmath.core :as m]
-            [clojure2d.core :as c]
+  (:require [clojure2d.core :as c]
             [com.rpl.specter
-             :as sp
-             :refer [transform multi-transform multi-path terminal terminal-val
-                     ALL LAST]]))
+             :as
+             sp
+             :refer
+             [ALL
+              collect-one
+              LAST
+              multi-path
+              multi-transform
+              terminal
+              terminal-val
+              transform]]
+            [experiments.plotter.core :as core]))
 
 (defn draw-point
   [canvas {:keys [coord ray-coord term-point] :as point-ray} state]
@@ -25,28 +32,51 @@
     (draw-point canvas point state))
   canvas)
 
-(defn draw
-  [canvas window frame state]
-  (let [{:keys [plotted-points] :as global-state} (c/get-state window)]
-    #_(println "Drawing" plotted-points)
-    (-> canvas
-        (c/set-background :white)
-        (draw-plotted-points plotted-points state))
-    (c/set-state! window (transform [:plotted-points ALL]
-                                    #(core/next-state % global-state)
-                                    global-state)))
-  state)
+#_(defn draw
+    [canvas window frame state]
+    (let [{:keys [plotted-points] :as global-state} (c/get-state window)]
+      #_(println "Drawing" plotted-points)
+      (-> canvas
+          (c/set-background :white)
+          (draw-plotted-points plotted-points state))
+      (c/set-state! window (transform [:plotted-points ALL]
+                                      #(core/next-state % global-state)
+                                      global-state)))
+    state)
+;;line plotter
+(defn draw [canvas window frame state]
+  (c/set-background canvas :wite)
+  (let [{:keys [pt1 pt2]} (c/get-state window)
+        [x1 y1] pt1
+        [x2 y2] pt2
+        y-diff (- y2 y1)
+        x-diff (- x2 x1)]
+    (if (< 0 x-diff)
+      (let [slope (/ y-diff x-diff)
+            s-vec (if (> y-diff x-diff) [slope 1] [1 slope])
+            line (take-while (fn [[x y]]
+                               (and (< x x2)
+                                    (< y y2)))
+                             (iterate #(mapv + % s-vec) [x1 y1]))]
+        (doseq [pt line
+                :let [[x y] pt]]
+          (-> canvas
+              (c/set-color [0 0 255])
+              (c/point pt)))))))
 
 (let [w 500
       h 500
       fps 60
       window-name "plotter"]
   (def window (c/show-window
-               {:window-name window-name 
-                :canvas (c/canvas w h)
-                :fps fps
-                :state {:plotted-points []}
-                :draw-fn #(draw %1 %2 %3 %4)})))
+                {:window-name window-name
+                 :canvas      (c/canvas w h)
+                 :fps         fps
+                 :state       {:plotted-points []
+                               :pt1 [0 0]
+                               :pt2 [0 0]}
+                 :draw-fn     #(draw %1 %2 %3 %4)
+                 :always-on-top? true})))
 
 (def ray-speed 0.05)
 
@@ -62,25 +92,31 @@
     (conj points point)
     ;; Set ray-movement-vector and termination-point of vector before inserted
     (conj (multi-transform [LAST
-                            (multi-path 
-                             [:term-point (terminal-val coord)]
-                             [(terminal #(assoc % :ray-vec (ray-vec (:coord %) coord)))])]
+                            (multi-path
+                              [:term-point (terminal-val coord)]
+                              [(terminal #(assoc % :ray-vec (ray-vec (:coord %) coord)))])]
                            points)
           point)))
 
+;; (defmethod c/mouse-event ["plotter" :mouse-clicked] [evt state]
+;;   (clojure.pprint/pprint (:plotted-points state))
+;;   (let [coord ((juxt c/mouse-x c/mouse-y) evt)]
+;;     (update state
+;;             :plotted-points
+;;             add-point
+;;             (core/->PointRay coord coord [0 0] nil))))
 (defmethod c/mouse-event ["plotter" :mouse-clicked] [evt state]
-  (println "*********************")
-  (clojure.pprint/pprint (:plotted-points state))
   (let [coord ((juxt c/mouse-x c/mouse-y) evt)]
-    (update state
-            :plotted-points
-            add-point
-            (core/->PointRay coord coord [0 0] nil))))
+    (assoc state :pt1 coord)))
+
+(defmethod c/mouse-event ["plotter" :mouse-moved] [evt state]
+  (let [coord ((juxt c/mouse-x c/mouse-y) evt)]
+    (assoc state :pt2 coord)))
 
 ;;-------------;;
 ;;   comments  ;;
 ;;-------------;;
-(comment 
+(comment
   (let [{[x y] :a :as test} {:a [12 11]}]
     [x y test])
 
@@ -97,11 +133,9 @@
 
   (multi-transform [LAST
                     (multi-path
-                     ;;Can't reference LAST from a terminal path directly
-                     [(terminal #(assoc % :a (+ 12 (:b %))))]
-                     [:b (terminal dec)]
-                     [:c (terminal-val 123)])]
+                      [(collect-one :b) :a (terminal +)]
+                      [:b (terminal dec)]
+                      [:c (terminal-val 123)])]
                    [1 2 3 4 5 {:a 1 :b 5 :c nil}])
 
-  (sp/setval [:b sp/END] [ 1 ] {:a 12 :b [1 2 3]})
-  )
+  (sp/setval [:b sp/END] [1] {:a 12 :b [1 2 3]}))

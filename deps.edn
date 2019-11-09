@@ -2,4 +2,13 @@
  :deps {org.clojure/clojure {:mvn/version "1.10.1-beta2"}
         clojure2d {:mvn/version "1.2.0-SNAPSHOT"}
         generateme/fastmath {:mvn/version "1.2.0"}
-        com.rpl/specter {:mvn/version "1.1.2"}}}
+        com.rpl/specter {:mvn/version "1.1.2"}
+        quil {:mvn/version "3.0.0"}}
+ :aliases
+ {:nrepl {:extra-deps  {nrepl             {:mvn/version "0.6.0"}
+                        cider/cider-nrepl {:mvn/version "0.22.1"}
+                        refactor-nrepl {:mvn/version "2.4.0"}}
+          :extra-paths ["dev"]
+          :main-opts   ["--main" "nrepl.cmdline"
+                        "--middleware" "[cider.nrepl/cider-middleware,refactor-nrepl.middleware/wrap-refactor]"
+                        "--port 9000"]}}}

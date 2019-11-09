@@ -2,7 +2,7 @@
   (:require [clojure2d.core :as c]
             [fastmath.core :as m]
             [fastmath.random :as r]
-            [common.utils :as utils]
+            ;;[common.utils :as utils]
             [fastmath.core :as math]
             [com.rpl.specter :as sp :refer-macros [select transform]]))
 
@@ -24,11 +24,25 @@
     (let [shape '([0 0 0] [0 300 0] [100 50 100] [400 0 44])
           polygon (map #(utils/projected-point % vp) shape)]
       (-> canvas
-          (c/set-color [255 0 0])
+          (c/set-color [255 0 0])i
           (c/filled-with-stroke
-           [255 0 0] [0 0 0]
-           c/path polygon true)
+            [255 0 0] [0 0 0]
+            c/path polygon true)
           #_(c/path polygon true false))))
+
+(defn cube
+  "Sequence of points representing a cube
+  gets a sequence of points of a cube at 
+  origin [`x` `y` `z`] and a `width` `height` and `length`"
+  [x y z width height length]
+  (let [tl-pt [x y z]
+        front-transforms [[0 0 0]
+                          [width 0 0]
+                          [width height 0]
+                          [0 height 0]]
+        left
+        left-side [x y z]])
+  )
 
 (defn z-scale
   "Takes in the current entity's `z` coordinate and

@@ -3,6 +3,9 @@
             [fastmath.core :as m]
             [com.rpl.specter :as sp :refer-macros [select transform]]))
 
+(defn mouse-pos [e]
+  ((juxt c/mouse-x c/mouse-y) e))
+
 (defmacro anon-proxy
   "Creates a function that proxies another fn.
   Used when live coding with an api that keeps
@@ -48,7 +51,7 @@
   "
   [vanishing-point point-vecs]
   (sp/transform [sp/ALL sp/ALL]
-                #(utils/projected-point % vanishing-point)
+                #(projected-point % vanishing-point)
                 point-vecs))
 
 ;; Comment section
@@ -69,4 +72,4 @@
 
 (defn update-state! [window key fn]
   (let [cur-state (c/get-state window)]
-    (c/set-state! window (update cur-state :key fn))))
+    (c/set-state! window (update cur-state key fn))))
