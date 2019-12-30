@@ -1,107 +1,123 @@
 (ns rivulets.quil
-  (:require [quil.core :as q :include-macros true]
-            [fastmath.core :as math]
-            [fastmath.random :as random]
+  (:require [rivulets.core :as riv :refer [pi]]
+            [quil.core :as q :include-macros true]
             [clojure.datafy :as datafy]
-            [quil.middleware :as m]))
+            [fastmath.random :as random]
+            [quil.middleware :as m]
+            [com.rpl.specter :refer [transform ALL]]
+            [fastmath.core :as math]))
 
 (def width 800)
 (def height 800)
 (def half-width (/ width 2))
 (def half-height (/ height 2))
 
-(def pi (memoize (fn [x] (* math/PI x))))
-(def dist (memoize math/dist))
+#_(if-let [{:keys [a b]} nil]
+    'yes 'no)
+;;=====DRAW=====
+(defn- spike-rad-offset
+  [{:keys [origin radius angle start-angle spike] :as res-circ}]
+  (if-let [{:keys [max-arc-length start-angle max-radius]} spike]
+    (-> (- (* 2 angle) max-arc-length (* 2 start-angle))
+        (math/pow 2)
+        (/ (math/pow max-arc-length 2))
+        -
+        inc
+        (* (+ max-radius radius)))))
 
-(defn t
-  "Gives the quil time in miliseconds.
-  can be provide a `factor` to multiply by."
-  ([] (t 1))
-  ([factor] (* (q/millis) factor)))
+(defn draw-state [state]
+  (q/background 0)
+  (let [res-circ (:res-circ state) 
+        {:keys [origin radius start-angle angle max-length spike]} res-circ
+        [x y] origin
+        mid-angle (-> (+ angle start-angle) (/ 2))]
+    (q/stroke [0 255 0])
+    (q/stroke-weight 1)
+    (doseq [a (range start-angle angle 0.003)]
+      (let [radius' (if (and spike (>= a (:start-angle spike)))
+                      (-> res-circ
+                          spike-rad-offset
+                          (* 0.5)
+                          (+ radius))
+                      radius)]
+        (apply q/point (riv/circle-point origin a radius')))
+      #_(cond
+          (nil? spike) (apply q/point (riv/circle-point origin a radius))
+          :else (apply q/point (spike-coord res-circ))))))
 
-(defn move
-  [[x y] min-angle max-angle length]
-  (let [angle (random/frand min-angle max-angle)]
-    [(-> angle math/cos (* length) (+ x))
-     (-> angle math/sin - (* length) (+ y))]))
-
-(defn in-bounds?
-  [[x y] w h]
-  (and (<= 0 x w)
-       (<= 0 y h)))
-
-(defn riv-seq
-  "Generates a sequence of reviulet points given
-  an initial `point` and `angle` of direction.
-  boundaries determined by `w` and `h`"
-  [point angle w h options]
-  (let [{:keys [length sweep]} (merge {:length 10
-                                       :sweep (pi 1/4)}
-                                      options)
-        [x y] point 
-        min-angle (- angle sweep)
-        max-angle (+ angle sweep)
-        move-fn #(move % min-angle max-angle length)]
-    (take-while #(in-bounds? % w h)
-                (iterate move-fn point))))
-(merge {:a 'default} nil)
-
-(defrecord rivulet [point-seq draw-frame x y])
-;; Quil functions
+;;=====STATE=====
 (defn setup []
   (q/frame-rate 30)
   (q/background 255 255 255)
-  (let [points (riv-seq [half-width 0] (pi 1.5) width height {:sweep (pi 1/8) :length 20})
-        [x y] (first points)]
-    (q/set-state!
-      :rivulets ()
-      :point-seq points
-      :draw-frame 0
-      :x x :y y)))
+  (q/set-state! #_:rivulets #_(list (riv/make-rivulet [half-width 0]
+                                                      (riv/pi 1.5)
+                                                      width
+                                                      height
+                                                      {:sweep (riv/pi 1/8)
+                                                       :length 5}))
+                :res-circ  {:origin [300 300] 
+                            :radius 250
+                            :start-angle 0
+                            :angle 0
+                            :max-length 300
+                            :spike {:start-angle 0
+                                    :max-arc-length (pi 1/4)
+                                    :max-radius 250}}))
 
-#_(cons [1 2] '([3 4] [5 6]))
-(defn draw [state]
-  (if (nil? (:point-seq state))
-    (q/no-loop))
-  (let [{:keys [point-seq x y]} state
-        [x1 y1] (first point-seq)]
-    (q/fill 255 0 0)
-    (q/line x1 y1 x y)))
+(defn key-pressed [event state]
+  (let [{:keys [start-angle angle spike radius]} state]
+    (when (not spike)
+      (assoc state :spike {:start-angle angle 
+                           :max-arc-length (pi 1/8)
+                           :max-radius (+ radius 50)}))))
+
+(defn- next-spike
+  [{:keys [start-angle max-radius max-arc-length] :as spike} current-angle]
+  (when (or (nil? spike)
+            (< (- current-angle start-angle)
+               max-arc-length))
+    spike))
+
+(defn- next-res-cirle
+  [{:keys [radius start-angle angle max-length spike] :as res-circ}]
+  (let [length-incr 0.02 ;;incr by time factor
+        next-angle (-> angle (+ length-incr) #_(mod (pi 2)))
+        next-start-angle (if (< next-angle start-angle)
+                           0 start-angle)
+        arc-length (-> (- next-angle next-start-angle)
+                       (* radius))]
+    ;; reached length, adjust start-angle
+    (assoc res-circ
+           :angle next-angle
+           :start-angle (if (>= arc-length max-length)
+                          (+ next-start-angle length-incr)
+                          next-start-angle)
+           :spike (next-spike spike next-angle))))
 
 (defn update-state [state]
-  ;; perhaps create sequence of sub-points to render in draw
-  ;; easier to wrap head around.
-  (let [point-seq (:point-seq state)
-        [[x1 y1] [x2 y2]] point-seq
-        time (-> (q/frame-count)
-                 (- (:draw-frame state))
-                 (* 0.3))
-        dx (* time (- x2 x1)) 
-        dy (* time (- y2 y1))
-        x (+ x1 dx)
-        y (+ y1 dy)
-        total-dist (math/dist x1 y1 x2 y2)
-        drawn-dist (math/dist x1 y1 x y)
-        ]
-    (if (>= drawn-dist total-dist)
-      (do
-        (assoc state
-               :point-seq (next point-seq)
-               :draw-frame (q/frame-count)
-               :x x1 :y y1))
-      (assoc state :x x :y y))
-    ))
+  (-> state
+      (update :res-circ next-res-cirle)))
 
 (q/defsketch rivulet-quil-example
   :title "rivulets in Quil"
   :setup setup,
-  :draw draw
+  :draw draw-state
   :update update-state
+  :key-pressed key-pressed
   :size [800 600]
   :features [:keep-on-top]
   :middleware [m/fun-mode])
 
 (comment
+  (cons [1 2] '([3 4] [5 6]))
+  (transform [:lst ALL] inc {:lst [1 2 3 4]})
+  (transform [ALL ALL] inc [[1 2] [3 4]])
+  (transform [ALL ALL] inc ['(1 2) '(3 4)])
+  (transform [ALL ALL] inc '([1 2] (3 4)))
+  #_(partition 2 1 (list (pi 2)) (take 5 (iterate #(+ % (/ (pi 2) 4)) 0)))
+  #_(partition 2 1 (list (pi 2)) (range 0 (pi 2) (-> (pi 2) (/ 3))))
+  #_(partition 2 1 '(5) (range 0 5))
+
   ;; Create a line drawing effect 
   (let [[x1 y1] [(/ width 2) 0]
         [x2 y2] [(/ width 2) height]
@@ -112,4 +128,15 @@
     (q/line x1
             y1
             (+ x1 (* time dx))
-            (+ y1 (* time dy)))))
+            (+ y1 (* time dy))))
+  #_(defn draw-state [state]
+      (doseq [rivulet (:rivulets state)
+              :let [{:keys [x y point-seq]} rivulet
+                    [x1 y1] (first point-seq)]]
+        (q/fill 255 0 0)
+        (q/line x1 y1 x y)))
+
+  #_(def circle (riv/make-coil-circle [200 200] 100 200))
+
+  )
+
